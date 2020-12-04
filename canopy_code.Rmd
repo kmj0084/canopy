@@ -1,0 +1,143 @@
+
+---
+title: "Canopy Growth Corp Stock Forecast"
+author: "Keegan"
+date: "December 4, 2020"
+output: html_document
+---
+
+```{r}
+library(vars)
+library(mFilter)
+library(tseries)
+library(TSstudio)
+library(forecast)
+library(tidyverse)
+library(plotly)
+```
+```{r}
+library(readr)
+CGC <- read_csv("C:/Users/kejohnso/Desktop/CGC.csv", 
+    col_types = cols(`Adj Close` = col_skip(), 
+        Date = col_date(format = "%Y-%m-%d")))
+```
+
+```{r}
+head(CGC)
+```
+
+```{r}
+open_cgc <- ts(CGC$Open, start = c(2014,04,07), frequency=365.25)
+high_cgc <- ts(CGC$High, start = c(2014,04,07), frequency=365.25)
+low_cgc <- ts(CGC$Low, start = c(2014,04,07), frequency=365.25)
+close_cgc <- ts(CGC$Close, start = c(2014,04,07), frequency=365.25)
+volume_cgc <- ts(CGC$Volume, start = c(2014,04,07), frequency=365.25)
+```
+
+```{r}
+autoplot(open_cgc)
+autoplot(high_cgc)
+autoplot(low_cgc)
+autoplot(close_cgc)
+autoplot(volume_cgc)
+```
+
+```{r}
+pp.test(open_cgc)
+pp.test(high_cgc)
+pp.test(low_cgc)
+pp.test(close_cgc)
+pp.test(volume_cgc)
+```
+
+```{r}
+# Difference Data
+```
+
+```{r}
+var1 <- cbind(open_cgc, high_cgc, low_cgc, close_cgc, volume_cgc)
+colnames(var1) <- cbind("Open","High","Low", "Close", "Volume")
+```
+
+```{r}
+lags <- VARselect(var1, lag.max = 15, type = "const")
+lags$selection
+```
+
+```{r}
+model1 <- VAR(var1, p = 6, type = "const", season = NULL, exog = NULL) 
+summary(model1)
+```
+
+```{r}
+serial1 <- serial.test(model1, lags.pt = 6, type = "PT.asymptotic")
+serial1
+```
+
+```{r}
+arch1 <- arch.test(model1, lags.multi = 15, multivariate.only = TRUE)
+arch1
+```
+
+```{r}
+normal1 <- normality.test(model1, multivariate.only = TRUE)
+normal1
+```
+
+```{r}
+stab1 <- stability(model1, type = "OLS-CUSUM")
+plot(stab1)
+```
+
+```{r}
+granger_open <- causality(model1, cause = "Open")
+granger_open
+
+granger_high <- causality(model1, cause = "High")
+granger_high
+
+granger_low <- causality(model1, cause = "Low")
+granger_low
+
+granger_close <- causality(model1, cause = "Close")
+granger_close
+
+granger_volume <- causality(model1, cause = "Volume")
+granger_volume
+```
+
+```{r}
+irf_open <- irf(model1, impulse = "Open", response = "Open", n.ahead = 20, boot = TRUE)
+plot(irf_open, ylab = "Open", main = "Open's shock to Open")
+
+irf_high <- irf(model1, impulse = "Open", response = "High", n.ahead = 20, boot = TRUE)
+plot(irf_high, ylab = "High", main = "Open's shock to High")
+
+irf_low <- irf(model1, impulse = "Open", response = "Low", n.ahead = 20, boot = TRUE)
+plot(irf_low, ylab = "Low", main = "Open's shock to Low")
+
+irf_close <- irf(model1, impulse = "Open", response = "Close", n.ahead = 20, boot = TRUE)
+plot(irf_close, ylab = "Close", main = "Open's shock to Close")
+
+irf_volume <- irf(model1, impulse = "Open", response = "Volume", n.ahead = 20, boot = TRUE)
+plot(irf_volume, ylab = "Volume", main = "Open's shock to Volume")
+```
+
+```{r}
+fevd1 <- fevd(model1, n.ahead = 10)
+fevd1
+plot(fevd1)
+```
+
+```{r}
+forecast <- predict(model1, n.ahead = 20, ci = 0.90)
+
+fanchart(forecast, names = "Open", main = "Open", xlab = "Time Steps", ylab = "Open")
+fanchart(forecast, names = "High", main = "High", xlab = "Time Steps", ylab = "High")
+fanchart(forecast, names = "Low", main = "Low", xlab = "Time Steps", ylab = "Low")
+fanchart(forecast, names = "Close", main = "Close", xlab = "Time Steps", ylab = "Close")
+fanchart(forecast, names = "Volume", main = "Volume", xlab = "Time Steps", ylab = "Volume")
+
+forecast
+```
+
